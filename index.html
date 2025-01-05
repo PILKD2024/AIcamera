@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Camera to Image API</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
+      background-color: #555;
+    }
+
+    /* Simple nav bar for "History" link */
+    .nav-bar {
+      width: 100%;
+      background-color: #333;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    .nav-bar a {
+      color: #fff;
+      text-decoration: none;
+      margin-right: 20px;
+      font-weight: bold;
+    }
+
+    .nav-bar a:hover {
+      text-decoration: underline;
+    }
+
+    .camera-container {
+      width: 100%;
+      height: 66.67%;
+      position: relative;
+      background-color: black;
+      /* fallback background */
+    }
+
+    #video {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #canvas {
+      display: none;
+    }
+
+    #generated-image {
+      display: none;
+    }
+
+    #loading {
+      display: none;
+      font-size: 18px;
+      color: #555;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.5);
+      z-index: 10;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .controls {
+      position: absolute;
+      bottom: 20px;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      gap: 20px;
+      z-index: 20;
+    }
+
+    .circle-btn {
+      width: 60px;
+      height: 60px;
+      background-color: red;
+      border: none;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .circle-btn img {
+      width: 30px;
+      height: 30px;
+    }
+
+    .prompt-carousel {
+      /*position: absolute;*/
+      bottom: 100px;
+      width: 90%;
+      max-height: 60px;
+      background-color: rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      border-radius: 5px;
+      padding: 5px;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+      z-index: 30;
+    }
+
+    .prompt-navigation {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .arrow-btn {
+      background-color: rgba(0, 0, 0, 0.6);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .arrow-btn:hover {
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+
+    .prompt-display {
+      font-size: 18px;
+      font-weight: bold;
+      color: #fff;
+    }
+
+    /* Custom prompt container */
+    .custom-prompt-container {
+      position: absolute;
+      bottom: 50px;
+      width: 90%;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      z-index: 40;
+    }
+
+    #custom-prompt {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    #apply-prompt {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #apply-prompt:hover {
+      background-color: #0056b3;
+    }
+
+    #toggle-prompt {
+      /*position: absolute;*/
+      bottom: 10px;
+      left: 50%;
+      /*transform: translateX(-50%);*/
+
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #toggle-prompt:hover {
+      background-color: #0056b3;
+    }
+
+    /* Thumbnail & Popup */
+    .thumbnail-container {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      width: 100px;
+      height: 100px;
+      z-index: 40;
+      cursor: pointer;
+      display: none;
+    }
+
+    .thumbnail-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border: 2px solid #fff;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+    .popup-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+
+    .popup-container img {
+      max-width: 90%;
+      max-height: 90%;
+      border: 5px solid #fff;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Navigation bar with link to History page -->
+  <div class="nav-bar">
+    <a href="/history.html">History</a>
+  </div>
+
+  <div class="camera-container">
+    <video id="video" autoplay></video>
+    <canvas id="canvas"></canvas>
+    <img id="generated-image">
+    <div id="loading">
+      <div style="text-align:center;">
+        <p>Generating... Please wait</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="prompt-carousel">
+    <div class="prompt-navigation">
+      <button class="arrow-btn" id="left-arrow">&#9664;</button>
+      <div class="prompt-display" id="prompt-display">1</div>
+      <button class="arrow-btn" id="right-arrow">&#9654;</button>
+    </div>
+  </div>
+
+  <!-- Custom prompt container -->
+  <div class="custom-prompt-container" style="display: none;">
+    <input type="text" id="custom-prompt" placeholder="輸入自定義 Prompt" />
+    <button id="apply-prompt">使用自定義 Prompt</button>
+  </div>
+  <button id="toggle-prompt">切換自定義 Prompt</button>
+
+  <!-- Capture button -->
+  <div class="controls">
+    <button class="circle-btn" id="capture-generate"></button>
+  </div>
+
+  <!-- Thumbnail -->
+  <div class="thumbnail-container" id="thumbnail-container">
+    <img id="thumbnail-image" src="" alt="Generated Thumbnail">
+  </div>
+
+  <!-- Popup preview -->
+  <div class="popup-container" id="popup-container">
+    <img id="popup-image" src="" alt="Full-Size Image">
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const loadingDiv = document.getElementById('loading');
+    const captureGenerateButton = document.getElementById('capture-generate');
+    const promptDisplay = document.getElementById('prompt-display');
+    const leftArrow = document.getElementById('left-arrow');
+    const rightArrow = document.getElementById('right-arrow');
+
+    const thumbnailContainer = document.getElementById('thumbnail-container');
+    const thumbnailImage = document.getElementById('thumbnail-image');
+    const popupContainer = document.getElementById('popup-container');
+    const popupImage = document.getElementById('popup-image');
+
+    const customPromptContainer = document.querySelector('.custom-prompt-container');
+    const togglePromptButton = document.getElementById('toggle-prompt');
+    const customPromptInput = document.getElementById('custom-prompt');
+    const applyPromptButton = document.getElementById('apply-prompt');
+
+    let stream = null;
+    let currentPromptIndex = 0;
+
+    // Sample prompts
+    const prompts = [
+      /*超現實*/"A surrealist scene with floating objects and impossible structures. The lighting and colors are soft and dreamlike, creating an otherworldly, fantastical atmosphere where reality bends and distorts.",
+      /*雙重曝光*/"A double exposure image blending two distinct scenes, with one layer of nature and another of a city skyline. The images overlap softly, creating a dreamlike and surreal effect, with light and shadow merging across both elements.",
+      /*油畫*/"A painting-style image rendered with thick, textured brushstrokes. The colors are rich and deep, creating a sense of depth and dimension, while the overall composition has an artistic and painterly feel.",
+      /*Cyberpunk*/"A fusion of Impressionist and Cyberpunk styles, where soft, painterly brushstrokes meet the neon-lit, high-tech atmosphere of a futuristic cityscape. The colors shift between warm, glowing hues and stark, electric tones, creating a sense of both nostalgic beauty and cutting-edge technology.",
+      /*浪漫*/"A photograph styled like an Impressionist painting, where light and color blend fluidly. The scene is bathed in warm, diffused lighting, with soft, visible brushstrokes and a dreamlike atmosphere. The image captures a fleeting moment with vibrant, yet gentle hues that create a sense of movement and life."
+    ];
+    const promptsLabels = ["超現實", "雙重曝光", "油畫", "Cyberpunk", "浪漫"];
+
+    let activePrompt = prompts[0];
+    let activePrompt2 = "";
+
+    // Toggle custom prompt input
+    togglePromptButton.addEventListener('click', () => {
+      if (customPromptContainer.style.display === 'none') {
+        customPromptContainer.style.display = 'flex';
+        togglePromptButton.textContent = '隱藏自定義 Prompt';
+      } else {
+        customPromptContainer.style.display = 'none';
+        togglePromptButton.textContent = '切換自定義 Prompt';
+      }
+    });
+
+    // Apply custom prompt
+    applyPromptButton.addEventListener('click', () => {
+      const userPrompt = customPromptInput.value.trim();
+      if (userPrompt) {
+        activePrompt2 = userPrompt;
+        alert(`當前使用的 Prompt: ${activePrompt2}`);
+      } else {
+        activePrompt2 = prompts[currentPromptIndex];
+        alert(`當前使用的 Prompt: ${activePrompt2}`);
+        activePrompt2 = "";
+      }
+    });
+
+    // Navigate left/right prompts
+    leftArrow.addEventListener('click', () => {
+      currentPromptIndex = (currentPromptIndex - 1 + promptsLabels.length) % promptsLabels.length;
+      updatePromptDisplay();
+    });
+    rightArrow.addEventListener('click', () => {
+      currentPromptIndex = (currentPromptIndex + 1) % promptsLabels.length;
+      updatePromptDisplay();
+    });
+
+    function updatePromptDisplay() {
+      promptDisplay.textContent = promptsLabels[currentPromptIndex];
+      // If user hasn't specified a custom prompt, fallback to the default array
+      activePrompt = prompts[currentPromptIndex];
+    }
+
+    // Show thumbnail
+    function showThumbnail(imageUrl) {
+      thumbnailImage.src = imageUrl;
+      thumbnailContainer.style.display = 'block';
+    }
+
+    // Popup image from thumbnail
+    thumbnailContainer.addEventListener('click', () => {
+      popupImage.src = thumbnailImage.src;
+      popupContainer.style.display = 'flex';
+    });
+    popupContainer.addEventListener('click', () => {
+      popupContainer.style.display = 'none';
+    });
+
+    // Start camera
+    async function startCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: 'environment' }
+        });
+        video.srcObject = stream;
+        video.setAttribute('playsinline', 'true'); // For iOS Safari
+        await video.play();
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        alert('Unable to access the camera. Please check permissions and try again.');
+      }
+    }
+
+    // Capture & Generate (AI step) & Save to DB
+    captureGenerateButton.addEventListener('click', async () => {
+      if (!stream) {
+        await startCamera();
+      }
+
+      loadingDiv.style.display = 'flex'; // Show loading
+
+      // 1. Capture current video frame
+      const context = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Convert to Blob
+      const imageData = canvas.toDataURL('image/jpeg');
+      const inputBlob = await (await fetch(imageData)).blob();
+
+      try {
+        // 2. Call AI Generation API (example: Stability.ai)
+        const aiFormData = new FormData();
+        if (activePrompt2) {
+          activePrompt = activePrompt2;
+        }
+        aiFormData.append('prompt', activePrompt);
+        aiFormData.append('mode', 'image-to-image');
+        aiFormData.append('strength', '0.7');
+        aiFormData.append('output_format', 'jpeg');
+        aiFormData.append('image', inputBlob);
+
+        const aiResponse = await fetch('https://api.stability.ai/v2beta/stable-image/generate/sd3', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer sk-G3mtQB7wH2NZVTstJE3SJGarBgvi0HeyOc4v9yY89Xh0YuJv',  // <-- Put your key here
+            'Accept': 'image/*'
+          },
+          body: aiFormData
+        });
+
+        if (!aiResponse.ok) {
+          const errorText = await aiResponse.text();
+          throw new Error(`AI Generation Failed: ${errorText}`);
+        }
+
+        // Get the result from the AI endpoint
+        const arrayBuffer = await aiResponse.arrayBuffer();
+        const generatedBlob = new Blob([arrayBuffer], { type: 'image/jpeg' });
+
+        // 3. Save both original and generated to backend
+        const saveFormData = new FormData();
+        saveFormData.append('original_image', inputBlob, 'original.jpg');
+        saveFormData.append('generated_image', generatedBlob, 'generated.jpg');
+        saveFormData.append('prompt', activePrompt);
+
+        const saveResponse = await fetch('/save_image', {
+          method: 'POST',
+          body: saveFormData
+        });
+        const saveResult = await saveResponse.json();
+        if (!saveResponse.ok) {
+          throw new Error(saveResult.message || 'Unknown error saving images');
+        }
+        console.log('Images saved with ID:', saveResult.id);
+
+        // 4. Show a local thumbnail of the AI result
+        const localUrl = URL.createObjectURL(generatedBlob);
+        showThumbnail(localUrl);
+
+      } catch (err) {
+        console.error('Error during generation or saving:', err);
+        alert(`Error: ${err.message}`);
+      } finally {
+        loadingDiv.style.display = 'none'; // Hide loading
+      }
+    });
+
+    // On page load
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        startCamera();
+      }, 500);
+      updatePromptDisplay();
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>History</title>
+    <style>
+        body {
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            background-color: #333;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .nav-bar a {
+            color: #fff;
+            text-decoration: none;
+            margin: 0 10px;
+            font-weight: bold;
+        }
+
+        .nav-bar a:hover {
+            text-decoration: underline;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .image-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .history-item {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 320px;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .history-item img {
+            max-width: 300px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .prompt-text {
+            font-size: 14px;
+            color: #333;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .image-label {
+            font-weight: bold;
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="nav-bar">
+        <a href="/">Camera / Home</a>
+    </div>
+
+    <h1>Saved Images History</h1>
+    <div class="image-container" id="image-container"></div>
+
+    <script>
+        fetch('/get_images')
+            .then(res => res.json())
+            .then(data => {
+                const container = document.getElementById('image-container');
+                data.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'history-item';
+
+                    // Original Image
+                    if (item.original_image_base64) {
+                        const origLabel = document.createElement('div');
+                        origLabel.className = 'image-label';
+                        origLabel.textContent = 'Original:';
+                        itemDiv.appendChild(origLabel);
+
+                        const origImg = document.createElement('img');
+                        origImg.src = `data:image/jpeg;base64,${item.original_image_base64}`;
+                        itemDiv.appendChild(origImg);
+                    }
+
+                    // Generated Image
+                    if (item.generated_image_base64) {
+                        const genLabel = document.createElement('div');
+                        genLabel.className = 'image-label';
+                        genLabel.textContent = 'Generated:';
+                        itemDiv.appendChild(genLabel);
+
+                        const genImg = document.createElement('img');
+                        genImg.src = `data:image/jpeg;base64,${item.generated_image_base64}`;
+                        itemDiv.appendChild(genImg);
+                    }
+
+                    // Prompt text
+                    const p = document.createElement('p');
+                    p.className = 'prompt-text';
+                    p.textContent = item.prompt_text || '(No prompt text)';
+                    itemDiv.appendChild(p);
+
+                    container.appendChild(itemDiv);
+                });
+            })
+            .catch(err => console.error('Error fetching images:', err));
+    </script>
+</body>
+
+</html>
