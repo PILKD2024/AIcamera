@@ -277,6 +277,12 @@
   </div>
   <button id="toggle-prompt">切換自定義 Prompt</button>
 
+  <div class="slider-container" style="margin: 10px 0; text-align: center;">
+    <label for="strength-slider">Strength: <span id="strength-value">0.7</span></label>
+    <br>
+    <input type="range" id="strength-slider" min="0" max="1" step="0.1" value="0.7">
+  </div>
+
   <!-- Capture button -->
   <div class="controls">
     <button class="circle-btn" id="capture-generate"></button>
@@ -424,7 +430,7 @@
         }
         aiFormData.append('prompt', activePrompt);
         aiFormData.append('mode', 'image-to-image');
-        aiFormData.append('strength', '0.7');
+        aiFormData.append('strength', strengthSlider.value);
         aiFormData.append('output_format', 'jpeg');
         aiFormData.append('image', inputBlob);
 
@@ -480,6 +486,12 @@
         startCamera();
       }, 500);
       updatePromptDisplay();
+    });
+
+    const strengthSlider = document.getElementById('strength-slider');
+    const strengthValueLabel = document.getElementById('strength-value');
+    strengthSlider.addEventListener('input', () => {
+      strengthValueLabel.textContent = strengthSlider.value;
     });
   </script>
 </body>
