@@ -58,35 +58,29 @@ def index():
 
 @app.route('/save_image', methods=['POST'])
 def save_image():
-    """
-    Save both the original camera image and the AI-generated image.
-    """
+    """Save the original camera image along with optional prompt text."""
     try:
-        original_file = request.files.get('original_image')     # The camera-captured image
-        generated_file = request.files.get('generated_image')   # The AI-generated image
+        original_file = request.files.get('original_image')
         prompt_text = request.form.get('prompt', '')
 
-        if not (original_file and generated_file):
+        if not original_file:
             return jsonify({
                 'status': 'error',
-                'message': 'Missing files. Need both original_image and generated_image.'
+                'message': 'Missing original_image file.'
             }), 400
 
         original_data = original_file.read()
-        generated_data = generated_file.read()
 
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # Insert into DB
+        # Insert into DB (generated_image_data left NULL)
         query = """
-            INSERT INTO generated_images (original_image_data, generated_image_data, prompt_text)
-            VALUES (%s, %s, %s)
+            INSERT INTO generated_images (original_image_data, prompt_text)
+            VALUES (%s, %s)
             RETURNING id;
         """
-        cur.execute(query, (psycopg2.Binary(original_data),
-                            psycopg2.Binary(generated_data),
-                            prompt_text))
+        cur.execute(query, (psycopg2.Binary(original_data), prompt_text))
         new_id = cur.fetchone()[0]
 
         conn.commit()
@@ -100,17 +94,17 @@ def save_image():
 
 @app.route('/get_images', methods=['GET'])
 def get_images():
-    """
-    Fetch all rows, returning both original and generated images in base64, plus prompt text.
-    """
+    """Fetch saved images and prompt text."""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("""
-            SELECT id, original_image_data, generated_image_data, prompt_text
+        cur.execute(
+            """
+            SELECT id, original_image_data, prompt_text
             FROM generated_images
             ORDER BY created_at DESC
-        """)
+            """
+        )
         rows = cur.fetchall()
         cur.close()
         conn.close()
@@ -118,18 +112,14 @@ def get_images():
         results = []
         for row in rows:
             row_id = row[0]
-            orig_data = row[1]  # bytes or None
-            gen_data = row[2]   # bytes or None
-            prompt_text = row[3] or ""
+            orig_data = row[1]
+            prompt_text = row[2] or ""
 
-            # Base64-encode each blob if present
             orig_b64 = base64.b64encode(orig_data).decode('utf-8') if orig_data else None
-            gen_b64 = base64.b64encode(gen_data).decode('utf-8') if gen_data else None
 
             results.append({
                 'id': row_id,
                 'original_image_base64': orig_b64,
-                'generated_image_base64': gen_b64,
                 'prompt_text': prompt_text
             })
         return jsonify(results)

@@ -56,10 +56,6 @@
       display: none;
     }
 
-    #generated-image {
-      display: none;
-    }
-
     #loading {
       display: none;
       font-size: 18px;
@@ -102,73 +98,36 @@
       height: 30px;
     }
 
-    .prompt-carousel {
-      /*position: absolute;*/
-      bottom: 100px;
-      width: 90%;
-      max-height: 60px;
-      background-color: rgba(255, 255, 255, 0.2);
-      display: flex;
-      align-items: center;
+    .prompt-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
       justify-content: center;
-      font-size: 16px;
-      border-radius: 5px;
-      padding: 5px;
-      box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
-      z-index: 30;
+      align-items: center;
+      z-index: 100;
     }
 
-    .prompt-navigation {
+    .prompt-modal-content {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
       gap: 10px;
     }
 
-    .arrow-btn {
-      background-color: rgba(0, 0, 0, 0.6);
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 20px;
-      height: 20px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-    }
-
-    .arrow-btn:hover {
-      background-color: rgba(0, 0, 0, 0.8);
-    }
-
-    .prompt-display {
-      font-size: 18px;
-      font-weight: bold;
-      color: #fff;
-    }
-
-    /* Custom prompt container */
-    .custom-prompt-container {
-      position: absolute;
-      bottom: 50px;
-      width: 90%;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      justify-content: center;
-      z-index: 40;
-    }
-
-    #custom-prompt {
-      flex: 1;
-      padding: 10px;
+    .prompt-modal textarea {
+      width: 300px;
+      height: 100px;
       font-size: 16px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
     }
 
-    #apply-prompt {
+    .prompt-modal button {
       padding: 10px 20px;
       font-size: 16px;
       background-color: #007BFF;
@@ -254,43 +213,28 @@
   <div class="camera-container">
     <video id="video" autoplay></video>
     <canvas id="canvas"></canvas>
-    <img id="generated-image">
     <div id="loading">
       <div style="text-align:center;">
-        <p>Generating... Please wait</p>
+        <p>Saving... Please wait</p>
       </div>
     </div>
   </div>
 
-  <div class="prompt-carousel">
-    <div class="prompt-navigation">
-      <button class="arrow-btn" id="left-arrow">&#9664;</button>
-      <div class="prompt-display" id="prompt-display">1</div>
-      <button class="arrow-btn" id="right-arrow">&#9654;</button>
+  <div id="prompt-modal" class="prompt-modal">
+    <div class="prompt-modal-content">
+      <textarea id="prompt-input" placeholder="輸入文字內容"></textarea>
+      <button id="prompt-submit">送出</button>
     </div>
-  </div>
-
-  <!-- Custom prompt container -->
-  <div class="custom-prompt-container" style="display: none;">
-    <input type="text" id="custom-prompt" placeholder="輸入自定義 Prompt" />
-    <button id="apply-prompt">使用自定義 Prompt</button>
-  </div>
-  <button id="toggle-prompt">切換自定義 Prompt</button>
-
-  <div class="slider-container" style="margin: 10px 0; text-align: center;">
-    <label for="strength-slider">Strength: <span id="strength-value">0.7</span></label>
-    <br>
-    <input type="range" id="strength-slider" min="0" max="1" step="0.1" value="0.7">
   </div>
 
   <!-- Capture button -->
   <div class="controls">
-    <button class="circle-btn" id="capture-generate"></button>
+    <button class="circle-btn" id="capture-save"></button>
   </div>
 
   <!-- Thumbnail -->
   <div class="thumbnail-container" id="thumbnail-container">
-    <img id="thumbnail-image" src="" alt="Generated Thumbnail">
+    <img id="thumbnail-image" src="" alt="Captured Thumbnail">
   </div>
 
   <!-- Popup preview -->
@@ -302,77 +246,18 @@
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const loadingDiv = document.getElementById('loading');
-    const captureGenerateButton = document.getElementById('capture-generate');
-    const promptDisplay = document.getElementById('prompt-display');
-    const leftArrow = document.getElementById('left-arrow');
-    const rightArrow = document.getElementById('right-arrow');
+    const captureSaveButton = document.getElementById('capture-save');
 
     const thumbnailContainer = document.getElementById('thumbnail-container');
     const thumbnailImage = document.getElementById('thumbnail-image');
     const popupContainer = document.getElementById('popup-container');
     const popupImage = document.getElementById('popup-image');
 
-    const customPromptContainer = document.querySelector('.custom-prompt-container');
-    const togglePromptButton = document.getElementById('toggle-prompt');
-    const customPromptInput = document.getElementById('custom-prompt');
-    const applyPromptButton = document.getElementById('apply-prompt');
+    const promptModal = document.getElementById('prompt-modal');
+    const promptInput = document.getElementById('prompt-input');
+    const promptSubmit = document.getElementById('prompt-submit');
 
     let stream = null;
-    let currentPromptIndex = 0;
-
-    // Sample prompts
-    const prompts = [
-      /*超現實*/"A surrealist scene with floating objects and impossible structures. The lighting and colors are soft and dreamlike, creating an otherworldly, fantastical atmosphere where reality bends and distorts.",
-      /*雙重曝光*/"A double exposure image blending two distinct scenes, with one layer of nature and another of a city skyline. The images overlap softly, creating a dreamlike and surreal effect, with light and shadow merging across both elements.",
-      /*油畫*/"A painting-style image rendered with thick, textured brushstrokes. The colors are rich and deep, creating a sense of depth and dimension, while the overall composition has an artistic and painterly feel.",
-      /*Cyberpunk*/"A fusion of Impressionist and Cyberpunk styles, where soft, painterly brushstrokes meet the neon-lit, high-tech atmosphere of a futuristic cityscape. The colors shift between warm, glowing hues and stark, electric tones, creating a sense of both nostalgic beauty and cutting-edge technology.",
-      /*浪漫*/"A photograph styled like an Impressionist painting, where light and color blend fluidly. The scene is bathed in warm, diffused lighting, with soft, visible brushstrokes and a dreamlike atmosphere. The image captures a fleeting moment with vibrant, yet gentle hues that create a sense of movement and life."
-    ];
-    const promptsLabels = ["超現實", "雙重曝光", "油畫", "Cyberpunk", "浪漫"];
-
-    let activePrompt = prompts[0];
-    let activePrompt2 = "";
-
-    // Toggle custom prompt input
-    togglePromptButton.addEventListener('click', () => {
-      if (customPromptContainer.style.display === 'none') {
-        customPromptContainer.style.display = 'flex';
-        togglePromptButton.textContent = '隱藏自定義 Prompt';
-      } else {
-        customPromptContainer.style.display = 'none';
-        togglePromptButton.textContent = '切換自定義 Prompt';
-      }
-    });
-
-    // Apply custom prompt
-    applyPromptButton.addEventListener('click', () => {
-      const userPrompt = customPromptInput.value.trim();
-      if (userPrompt) {
-        activePrompt2 = userPrompt;
-        alert(`當前使用的 Prompt: ${activePrompt2}`);
-      } else {
-        activePrompt2 = prompts[currentPromptIndex];
-        alert(`當前使用的 Prompt: ${activePrompt2}`);
-        activePrompt2 = "";
-      }
-    });
-
-    // Navigate left/right prompts
-    leftArrow.addEventListener('click', () => {
-      currentPromptIndex = (currentPromptIndex - 1 + promptsLabels.length) % promptsLabels.length;
-      updatePromptDisplay();
-    });
-    rightArrow.addEventListener('click', () => {
-      currentPromptIndex = (currentPromptIndex + 1) % promptsLabels.length;
-      updatePromptDisplay();
-    });
-
-    function updatePromptDisplay() {
-      promptDisplay.textContent = promptsLabels[currentPromptIndex];
-      // If user hasn't specified a custom prompt, fallback to the default array
-      activePrompt = prompts[currentPromptIndex];
-    }
-
     // Show thumbnail
     function showThumbnail(imageUrl) {
       thumbnailImage.src = imageUrl;
@@ -404,8 +289,19 @@
       }
     }
 
-    // Capture & Generate (AI step) & Save to DB
-    captureGenerateButton.addEventListener('click', async () => {
+    captureSaveButton.addEventListener('click', () => {
+      promptInput.value = '';
+      promptModal.style.display = 'flex';
+      promptInput.focus();
+    });
+
+    promptSubmit.addEventListener('click', async () => {
+      const userPrompt = promptInput.value.trim();
+      promptModal.style.display = 'none';
+      await captureAndSave(userPrompt);
+    });
+
+    async function captureAndSave(userPrompt) {
       if (!stream) {
         await startCamera();
       }
@@ -423,40 +319,10 @@
       const inputBlob = await (await fetch(imageData)).blob();
 
       try {
-        // 2. Call AI Generation API (example: Stability.ai)
-        const aiFormData = new FormData();
-        if (activePrompt2) {
-          activePrompt = activePrompt2;
-        }
-        aiFormData.append('prompt', activePrompt);
-        aiFormData.append('mode', 'image-to-image');
-        aiFormData.append('strength', strengthSlider.value);
-        aiFormData.append('output_format', 'jpeg');
-        aiFormData.append('image', inputBlob);
-
-        const aiResponse = await fetch('https://api.stability.ai/v2beta/stable-image/generate/sd3', {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer sk-G3mtQB7wH2NZVTstJE3SJGarBgvi0HeyOc4v9yY89Xh0YuJv',  // <-- Put your key here
-            'Accept': 'image/*'
-          },
-          body: aiFormData
-        });
-
-        if (!aiResponse.ok) {
-          const errorText = await aiResponse.text();
-          throw new Error(`AI Generation Failed: ${errorText}`);
-        }
-
-        // Get the result from the AI endpoint
-        const arrayBuffer = await aiResponse.arrayBuffer();
-        const generatedBlob = new Blob([arrayBuffer], { type: 'image/jpeg' });
-
-        // 3. Save both original and generated to backend
+        // Save original image and prompt to backend
         const saveFormData = new FormData();
         saveFormData.append('original_image', inputBlob, 'original.jpg');
-        saveFormData.append('generated_image', generatedBlob, 'generated.jpg');
-        saveFormData.append('prompt', activePrompt);
+        saveFormData.append('prompt', userPrompt);
 
         const saveResponse = await fetch('/save_image', {
           method: 'POST',
@@ -464,34 +330,27 @@
         });
         const saveResult = await saveResponse.json();
         if (!saveResponse.ok) {
-          throw new Error(saveResult.message || 'Unknown error saving images');
+          throw new Error(saveResult.message || 'Unknown error saving image');
         }
-        console.log('Images saved with ID:', saveResult.id);
+        console.log('Image saved with ID:', saveResult.id);
 
-        // 4. Show a local thumbnail of the AI result
-        const localUrl = URL.createObjectURL(generatedBlob);
+        // Show a local thumbnail of the captured image
+        const localUrl = URL.createObjectURL(inputBlob);
         showThumbnail(localUrl);
 
       } catch (err) {
-        console.error('Error during generation or saving:', err);
+        console.error('Error saving image:', err);
         alert(`Error: ${err.message}`);
       } finally {
         loadingDiv.style.display = 'none'; // Hide loading
       }
-    });
+    }
 
     // On page load
     document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         startCamera();
       }, 500);
-      updatePromptDisplay();
-    });
-
-    const strengthSlider = document.getElementById('strength-slider');
-    const strengthValueLabel = document.getElementById('strength-value');
-    strengthSlider.addEventListener('input', () => {
-      strengthValueLabel.textContent = strengthSlider.value;
     });
   </script>
 </body>
