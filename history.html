@@ -66,11 +66,6 @@
             word-break: break-word;
         }
 
-        .image-label {
-            font-weight: bold;
-            margin-top: 5px;
-            margin-bottom: 5px;
-        }
     </style>
 </head>
 
@@ -91,31 +86,12 @@
                     const itemDiv = document.createElement('div');
                     itemDiv.className = 'history-item';
 
-                    // Original Image
                     if (item.original_image_base64) {
-                        const origLabel = document.createElement('div');
-                        origLabel.className = 'image-label';
-                        origLabel.textContent = 'Original:';
-                        itemDiv.appendChild(origLabel);
-
                         const origImg = document.createElement('img');
                         origImg.src = `data:image/jpeg;base64,${item.original_image_base64}`;
                         itemDiv.appendChild(origImg);
                     }
 
-                    // Generated Image
-                    if (item.generated_image_base64) {
-                        const genLabel = document.createElement('div');
-                        genLabel.className = 'image-label';
-                        genLabel.textContent = 'Generated:';
-                        itemDiv.appendChild(genLabel);
-
-                        const genImg = document.createElement('img');
-                        genImg.src = `data:image/jpeg;base64,${item.generated_image_base64}`;
-                        itemDiv.appendChild(genImg);
-                    }
-
-                    // Prompt text
                     const p = document.createElement('p');
                     p.className = 'prompt-text';
                     p.textContent = item.prompt_text || '(No prompt text)';
