@@ -5,9 +5,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Camera to Image API</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Orbitron', sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -15,26 +16,28 @@
       height: 80vh;
       margin: 0;
       overflow: hidden;
-      background-color: #555;
+      background: radial-gradient(circle at center, #0d0d0d, #1a1a1a);
+      color: #e0e0e0;
     }
 
     /* Simple nav bar for "History" link */
     .nav-bar {
       width: 100%;
-      background-color: #333;
+      background: rgba(0, 0, 0, 0.8);
       padding: 10px;
       box-sizing: border-box;
+      border-bottom: 1px solid #0ff;
     }
 
     .nav-bar a {
-      color: #fff;
+      color: #0ff;
       text-decoration: none;
       margin-right: 20px;
       font-weight: bold;
     }
 
     .nav-bar a:hover {
-      text-decoration: underline;
+      text-shadow: 0 0 5px #0ff;
     }
 
     .camera-container {
@@ -63,13 +66,13 @@
     #loading {
       display: none;
       font-size: 18px;
-      color: #555;
+      color: #0ff;
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(255, 255, 255, 0.5);
+      background-color: rgba(0, 0, 0, 0.8);
       z-index: 10;
       justify-content: center;
       align-items: center;
@@ -88,18 +91,20 @@
     .circle-btn {
       width: 60px;
       height: 60px;
-      background-color: red;
+      background: linear-gradient(135deg, #0ff, #00f);
       border: none;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      box-shadow: 0 0 10px #0ff;
     }
 
     .circle-btn img {
       width: 30px;
       height: 30px;
+      filter: drop-shadow(0 0 5px #0ff);
     }
 
     .prompt-carousel {
@@ -107,14 +112,15 @@
       bottom: 100px;
       width: 90%;
       max-height: 60px;
-      background-color: rgba(255, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.6);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 16px;
       border-radius: 5px;
       padding: 5px;
-      box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+      color: #0ff;
       z-index: 30;
     }
 
