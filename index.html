@@ -5,9 +5,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Camera to Image API</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Orbitron', sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -15,15 +16,17 @@
       height: 80vh;
       margin: 0;
       overflow: hidden;
-      background-color: #555;
+      background: radial-gradient(circle at center, #0a0a0a, #000000);
+      color: #e0e0e0;
     }
 
     /* Simple nav bar for "History" link */
     .nav-bar {
       width: 100%;
-      background-color: #333;
+      background: linear-gradient(90deg, #00c6ff, #0072ff);
       padding: 10px;
       box-sizing: border-box;
+      box-shadow: 0 0 15px rgba(0, 198, 255, 0.5);
     }
 
     .nav-bar a {
@@ -63,13 +66,13 @@
     #loading {
       display: none;
       font-size: 18px;
-      color: #555;
+      color: #00c6ff;
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(255, 255, 255, 0.5);
+      background-color: rgba(0, 0, 0, 0.6);
       z-index: 10;
       justify-content: center;
       align-items: center;
@@ -88,13 +91,20 @@
     .circle-btn {
       width: 60px;
       height: 60px;
-      background-color: red;
-      border: none;
+      background: #00c6ff;
+      border: 2px solid #00ffff;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      box-shadow: 0 0 15px #00c6ff, inset 0 0 5px #ffffff;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .circle-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 20px #00c6ff, inset 0 0 5px #ffffff;
     }
 
     .circle-btn img {
@@ -107,15 +117,17 @@
       bottom: 100px;
       width: 90%;
       max-height: 60px;
-      background-color: rgba(255, 255, 255, 0.2);
+      background-color: rgba(0, 0, 0, 0.6);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 16px;
       border-radius: 5px;
       padding: 5px;
-      box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 0 10px rgba(0, 198, 255, 0.3);
+      border: 1px solid #00c6ff;
       z-index: 30;
+      color: #00c6ff;
     }
 
     .prompt-navigation {
@@ -126,9 +138,9 @@
     }
 
     .arrow-btn {
-      background-color: rgba(0, 0, 0, 0.6);
-      color: white;
-      border: none;
+      background-color: rgba(0, 198, 255, 0.2);
+      color: #00c6ff;
+      border: 1px solid #00c6ff;
       border-radius: 50%;
       width: 20px;
       height: 20px;
@@ -139,13 +151,13 @@
     }
 
     .arrow-btn:hover {
-      background-color: rgba(0, 0, 0, 0.8);
+      background-color: rgba(0, 198, 255, 0.4);
     }
 
     .prompt-display {
       font-size: 18px;
       font-weight: bold;
-      color: #fff;
+      color: #00c6ff;
     }
 
     /* Custom prompt container */
@@ -164,22 +176,25 @@
       flex: 1;
       padding: 10px;
       font-size: 16px;
-      border: 1px solid #ccc;
+      border: 1px solid #00c6ff;
       border-radius: 5px;
+      background: rgba(0, 0, 0, 0.6);
+      color: #e0e0e0;
     }
 
     #apply-prompt {
       padding: 10px 20px;
       font-size: 16px;
-      background-color: #007BFF;
-      color: white;
+      background: linear-gradient(90deg, #00c6ff, #0072ff);
+      color: #000;
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 198, 255, 0.5);
     }
 
     #apply-prompt:hover {
-      background-color: #0056b3;
+      box-shadow: 0 0 15px rgba(0, 198, 255, 0.8);
     }
 
     #toggle-prompt {
@@ -190,15 +205,16 @@
 
       padding: 10px 20px;
       font-size: 16px;
-      background-color: #007BFF;
-      color: white;
+      background: linear-gradient(90deg, #00c6ff, #0072ff);
+      color: #000;
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 198, 255, 0.5);
     }
 
     #toggle-prompt:hover {
-      background-color: #0056b3;
+      box-shadow: 0 0 15px rgba(0, 198, 255, 0.8);
     }
 
     /* Thumbnail & Popup */
@@ -217,9 +233,9 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      border: 2px solid #fff;
+      border: 2px solid #00c6ff;
       border-radius: 5px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 0 10px #00c6ff;
     }
 
     .popup-container {
@@ -238,8 +254,9 @@
     .popup-container img {
       max-width: 90%;
       max-height: 90%;
-      border: 5px solid #fff;
+      border: 5px solid #00c6ff;
       border-radius: 10px;
+      box-shadow: 0 0 20px #00c6ff;
     }
   </style>
 </head>
