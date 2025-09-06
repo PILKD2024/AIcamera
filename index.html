@@ -18,24 +18,6 @@
       background-color: #555;
     }
 
-    /* Simple nav bar for "History" link */
-    .nav-bar {
-      width: 100%;
-      background-color: #333;
-      padding: 10px;
-      box-sizing: border-box;
-    }
-
-    .nav-bar a {
-      color: #fff;
-      text-decoration: none;
-      margin-right: 20px;
-      font-weight: bold;
-    }
-
-    .nav-bar a:hover {
-      text-decoration: underline;
-    }
 
     .camera-container {
       width: 100%;
@@ -137,79 +119,10 @@
       cursor: pointer;
     }
 
-    #apply-prompt:hover {
-      background-color: #0056b3;
-    }
-
-    #toggle-prompt {
-      /*position: absolute;*/
-      bottom: 10px;
-      left: 50%;
-      /*transform: translateX(-50%);*/
-
-      padding: 10px 20px;
-      font-size: 16px;
-      background-color: #007BFF;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    #toggle-prompt:hover {
-      background-color: #0056b3;
-    }
-
-    /* Thumbnail & Popup */
-    .thumbnail-container {
-      position: fixed;
-      bottom: 10px;
-      right: 10px;
-      width: 100px;
-      height: 100px;
-      z-index: 40;
-      cursor: pointer;
-      display: none;
-    }
-
-    .thumbnail-container img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border: 2px solid #fff;
-      border-radius: 5px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-    }
-
-    .popup-container {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.8);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 50;
-    }
-
-    .popup-container img {
-      max-width: 90%;
-      max-height: 90%;
-      border: 5px solid #fff;
-      border-radius: 10px;
-    }
   </style>
 </head>
 
 <body>
-
-  <!-- Navigation bar with link to History page -->
-  <div class="nav-bar">
-    <a href="/history.html">History</a>
-  </div>
-
   <div class="camera-container">
     <video id="video" autoplay></video>
     <canvas id="canvas"></canvas>
@@ -230,16 +143,7 @@
   <!-- Capture button -->
   <div class="controls">
     <button class="circle-btn" id="capture-save"></button>
-  </div>
 
-  <!-- Thumbnail -->
-  <div class="thumbnail-container" id="thumbnail-container">
-    <img id="thumbnail-image" src="" alt="Captured Thumbnail">
-  </div>
-
-  <!-- Popup preview -->
-  <div class="popup-container" id="popup-container">
-    <img id="popup-image" src="" alt="Full-Size Image">
   </div>
 
   <script>
@@ -248,30 +152,14 @@
     const loadingDiv = document.getElementById('loading');
     const captureSaveButton = document.getElementById('capture-save');
 
-    const thumbnailContainer = document.getElementById('thumbnail-container');
-    const thumbnailImage = document.getElementById('thumbnail-image');
-    const popupContainer = document.getElementById('popup-container');
-    const popupImage = document.getElementById('popup-image');
 
     const promptModal = document.getElementById('prompt-modal');
     const promptInput = document.getElementById('prompt-input');
     const promptSubmit = document.getElementById('prompt-submit');
-
     let stream = null;
-    // Show thumbnail
-    function showThumbnail(imageUrl) {
-      thumbnailImage.src = imageUrl;
-      thumbnailContainer.style.display = 'block';
-    }
 
-    // Popup image from thumbnail
-    thumbnailContainer.addEventListener('click', () => {
-      popupImage.src = thumbnailImage.src;
-      popupContainer.style.display = 'flex';
-    });
-    popupContainer.addEventListener('click', () => {
-      popupContainer.style.display = 'none';
-    });
+    let capturedBlob = null;
+
 
     // Start camera
     async function startCamera() {
@@ -289,7 +177,19 @@
       }
     }
 
-    captureSaveButton.addEventListener('click', () => {
+    captureSaveButton.addEventListener('click', async () => {
+
+      if (!stream) {
+        await startCamera();
+      }
+      const context = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = canvas.toDataURL('image/jpeg');
+      capturedBlob = await (await fetch(imageData)).blob();
+
+
       promptInput.value = '';
       promptModal.style.display = 'flex';
       promptInput.focus();
@@ -298,30 +198,17 @@
     promptSubmit.addEventListener('click', async () => {
       const userPrompt = promptInput.value.trim();
       promptModal.style.display = 'none';
-      await captureAndSave(userPrompt);
+      await saveCapturedImage(userPrompt);
     });
 
-    async function captureAndSave(userPrompt) {
-      if (!stream) {
-        await startCamera();
+    async function saveCapturedImage(userPrompt) {
+      if (!capturedBlob) {
+        return;
       }
-
-      loadingDiv.style.display = 'flex'; // Show loading
-
-      // 1. Capture current video frame
-      const context = canvas.getContext('2d');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // Convert to Blob
-      const imageData = canvas.toDataURL('image/jpeg');
-      const inputBlob = await (await fetch(imageData)).blob();
-
+      loadingDiv.style.display = 'flex';
       try {
-        // Save original image and prompt to backend
         const saveFormData = new FormData();
-        saveFormData.append('original_image', inputBlob, 'original.jpg');
+        saveFormData.append('original_image', capturedBlob, 'original.jpg');
         saveFormData.append('prompt', userPrompt);
 
         const saveResponse = await fetch('/save_image', {
@@ -334,15 +221,12 @@
         }
         console.log('Image saved with ID:', saveResult.id);
 
-        // Show a local thumbnail of the captured image
-        const localUrl = URL.createObjectURL(inputBlob);
-        showThumbnail(localUrl);
-
       } catch (err) {
         console.error('Error saving image:', err);
         alert(`Error: ${err.message}`);
       } finally {
-        loadingDiv.style.display = 'none'; // Hide loading
+        loadingDiv.style.display = 'none';
+        capturedBlob = null;
       }
     }
 
