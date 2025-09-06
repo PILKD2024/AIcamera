@@ -143,6 +143,7 @@
   <!-- Capture button -->
   <div class="controls">
     <button class="circle-btn" id="capture-save"></button>
+
   </div>
 
   <script>
@@ -151,11 +152,14 @@
     const loadingDiv = document.getElementById('loading');
     const captureSaveButton = document.getElementById('capture-save');
 
+
     const promptModal = document.getElementById('prompt-modal');
     const promptInput = document.getElementById('prompt-input');
     const promptSubmit = document.getElementById('prompt-submit');
     let stream = null;
+
     let capturedBlob = null;
+
 
     // Start camera
     async function startCamera() {
@@ -174,6 +178,7 @@
     }
 
     captureSaveButton.addEventListener('click', async () => {
+
       if (!stream) {
         await startCamera();
       }
@@ -183,6 +188,7 @@
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
       const imageData = canvas.toDataURL('image/jpeg');
       capturedBlob = await (await fetch(imageData)).blob();
+
 
       promptInput.value = '';
       promptModal.style.display = 'flex';
@@ -204,6 +210,7 @@
         const saveFormData = new FormData();
         saveFormData.append('original_image', capturedBlob, 'original.jpg');
         saveFormData.append('prompt', userPrompt);
+
         const saveResponse = await fetch('/save_image', {
           method: 'POST',
           body: saveFormData
@@ -213,6 +220,7 @@
           throw new Error(saveResult.message || 'Unknown error saving image');
         }
         console.log('Image saved with ID:', saveResult.id);
+
       } catch (err) {
         console.error('Error saving image:', err);
         alert(`Error: ${err.message}`);
