@@ -310,7 +310,9 @@ shutter.addEventListener('click', ()=>{
 });
 
 btnConfirm.addEventListener('click', async ()=>{
-  const name=(nameInput.value||'photo').replace(/[^\w\-]+/g,'_');
+  // Sanitize the provided name while supporting non-English characters
+  const rawName=(nameInput.value||'photo').trim();
+  const name=encodeURIComponent(rawName).replace(/%20/g,'_');
   if(lastBlob){
     // 傳送到後端保存
     try{
