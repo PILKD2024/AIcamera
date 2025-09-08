@@ -66,6 +66,20 @@
             word-break: break-word;
         }
 
+        .delete-btn {
+            margin-top: 10px;
+            background-color: #ff4d4d;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .delete-btn:hover {
+            background-color: #ff0000;
+        }
+
     </style>
 </head>
 
@@ -96,6 +110,23 @@
                     p.className = 'prompt-text';
                     p.textContent = item.prompt_text || '(No prompt text)';
                     itemDiv.appendChild(p);
+
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'delete-btn';
+                    delBtn.textContent = 'Delete';
+                    delBtn.addEventListener('click', () => {
+                        fetch(`/delete_image/${item.id}`, { method: 'DELETE' })
+                            .then(res => res.json())
+                            .then(result => {
+                                if (result.status === 'ok') {
+                                    itemDiv.remove();
+                                } else {
+                                    console.error('Delete failed:', result.message);
+                                }
+                            })
+                            .catch(err => console.error('Error deleting image:', err));
+                    });
+                    itemDiv.appendChild(delBtn);
 
                     container.appendChild(itemDiv);
                 });
