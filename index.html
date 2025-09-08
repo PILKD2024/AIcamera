@@ -305,9 +305,8 @@ shutter.addEventListener('click', ()=>{
   ctx.fillStyle=g; ctx.fillRect(0,0,w,h); ctx.globalCompositeOperation='source-over';
 
   flashAnimation();
-  cap.toBlob(b=>{
-    lastBlob=b; modal.classList.add('open'); nameInput.value=''; setTimeout(()=>nameInput.focus(),60);
-  },'image/png',.95);
+  cap.toBlob(b=>{ lastBlob=b; },'image/png',.95);
+  modal.classList.add('open'); nameInput.value=''; nameInput.focus();
 });
 
 btnConfirm.addEventListener('click', async ()=>{
