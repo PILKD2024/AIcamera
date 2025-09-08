@@ -127,6 +127,27 @@ def get_images():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+@app.route('/delete_image/<int:image_id>', methods=['DELETE'])
+def delete_image(image_id):
+    """Delete an image and its associated text by id."""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "DELETE FROM generated_images WHERE id = %s", (image_id,)
+        )
+        deleted = cur.rowcount
+        conn.commit()
+        cur.close()
+        conn.close()
+        if deleted:
+            return jsonify({'status': 'ok'})
+        else:
+            return jsonify({'status': 'error', 'message': 'Image not found'}), 404
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
 @app.route('/history.html')
 def serve_history():
     return send_from_directory('.', 'history.html')
