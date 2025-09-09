@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -128,7 +129,8 @@
   <div id="prompt-modal" class="modal">
     <div class="modal-content">
       <textarea id="prompt-input" placeholder="Enter text"></textarea>
-      <button id="prompt-submit">Save</button>
+
+      <button id="prompt-save">Save</button>
     </div>
   </div>
 
@@ -139,7 +141,7 @@
     const loadingDiv = document.getElementById('loading');
     const promptModal = document.getElementById('prompt-modal');
     const promptInput = document.getElementById('prompt-input');
-    const promptSubmit = document.getElementById('prompt-submit');
+    const promptSave = document.getElementById('prompt-save');
     let stream = null;
     let capturedBlob = null;
 
@@ -172,10 +174,18 @@
       promptInput.focus();
     });
 
-    promptSubmit.addEventListener('click', async () => {
+    promptSave.addEventListener('click', async () => {
       const userPrompt = promptInput.value.trim();
       promptModal.style.display = 'none';
       await saveCapturedImage(userPrompt);
+    });
+
+    promptInput.addEventListener('keydown', async (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        promptModal.style.display = 'none';
+        await saveCapturedImage(promptInput.value.trim());
+      }
     });
 
     async function saveCapturedImage(userPrompt) {
@@ -209,5 +219,6 @@
       startCamera();
     });
   </script>
+
 </body>
 </html>
