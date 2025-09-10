@@ -310,9 +310,9 @@ shutter.addEventListener('click', ()=>{
 });
 
 btnConfirm.addEventListener('click', async () => {
-  const name=(nameInput.value||'photo').replace(/[^\w\-]+/g,'_');
-  if(capturedBlob){
-    await saveCapturedImage(name);
+  const userPrompt = nameInput.value.trim() || 'photo';
+  if (capturedBlob) {
+    await saveCapturedImage(userPrompt);
   }
   modal.classList.remove('open');
 });
