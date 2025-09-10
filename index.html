@@ -309,13 +309,10 @@ shutter.addEventListener('click', ()=>{
   },'image/png',.95);
 });
 
-btnConfirm.addEventListener('click', ()=>{
+btnConfirm.addEventListener('click', async () => {
   const name=(nameInput.value||'photo').replace(/[^\w\-]+/g,'_');
   if(capturedBlob){
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(capturedBlob); a.download=`${name}.png`;
-    document.body.appendChild(a); a.click(); URL.revokeObjectURL(a.href); a.remove();
-    saveCapturedImage(name);
+    await saveCapturedImage(name);
   }
   modal.classList.remove('open');
 });
