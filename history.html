@@ -4,6 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <title>History</title>
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#000000">
     <style>
         body {
             background: #f0f0f0;
@@ -132,6 +134,11 @@
                 });
             })
             .catch(err => console.error('Error fetching images:', err));
+    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js');
+      }
     </script>
 </body>
 

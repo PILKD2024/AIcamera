@@ -4,6 +4,8 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"/>
 <title>Speculative Camera</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#000000">
 <style>
 :root{
   --fg: rgba(255,255,255,.92);
@@ -348,6 +350,11 @@ document.addEventListener('visibilitychange', ()=>{
   if(!stream) return;
   stream.getVideoTracks().forEach(t => t.enabled = !document.hidden);
 });
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js');
+  }
 </script>
 </body>
 </html>
