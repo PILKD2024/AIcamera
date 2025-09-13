@@ -3,7 +3,7 @@ import psycopg2
 from flask import Flask, request, jsonify, send_from_directory
 import os
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='icons', static_url_path='/icons')
 
 # 1. Configure your PostgreSQL database connection
 #    Replace with your actual database credentials
@@ -151,6 +151,15 @@ def delete_image(image_id):
 @app.route('/history.html')
 def serve_history():
     return send_from_directory('.', 'history.html')
+
+@app.route('/manifest.webmanifest')
+def manifest():
+    return send_from_directory('.', 'manifest.webmanifest')
+
+@app.route('/sw.js')
+def service_worker():
+    return send_from_directory('.', 'sw.js')
+
 
 if __name__ == '__main__':
     # 3. Run the Flask app (default: localhost:5000)
