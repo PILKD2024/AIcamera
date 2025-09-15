@@ -25,3 +25,20 @@ self.addEventListener('fetch', event => {
     caches.match(event.request).then(response => response || fetch(event.request))
   );
 });
+
+self.addEventListener('push', event => {
+  let data = {};
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data = {};
+    }
+  }
+  const title = data.title || 'Notification';
+  const body = data.body || '';
+  event.waitUntil(
+    self.registration.showNotification(title, { body })
+  );
+});
+

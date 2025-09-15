@@ -1,9 +1,18 @@
 import base64
-import psycopg2
-from flask import Flask, request, jsonify, send_from_directory
+import json
 import os
 
+import psycopg2
+from flask import Flask, request, jsonify, send_from_directory
+from pywebpush import WebPushException, webpush
+
 app = Flask(__name__, static_folder='icons', static_url_path='/icons')
+
+# In-memory storage for Push API subscriptions
+subscriptions = []
+
+VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY")
+VAPID_CLAIMS = {"sub": os.getenv("VAPID_EMAIL", "mailto:example@example.com")}
 
 # 1. Configure your PostgreSQL database connection
 #    Replace with your actual database credentials
@@ -146,6 +155,37 @@ def delete_image(image_id):
             return jsonify({'status': 'error', 'message': 'Image not found'}), 404
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/subscribe', methods=['POST'])
+def subscribe():
+    """Store a Push API subscription."""
+    subscription = request.get_json()
+    if subscription:
+        subscriptions.append(subscription)
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/broadcast', methods=['POST'])
+def broadcast():
+    """Send a push notification to all stored subscriptions."""
+    data = request.get_json() or {}
+    title = data.get('title', '')
+    body = data.get('body', '')
+    payload = json.dumps({'title': title, 'body': body})
+
+    for sub in list(subscriptions):
+        try:
+            webpush(
+                subscription_info=sub,
+                data=payload,
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims=VAPID_CLAIMS,
+            )
+        except WebPushException as exc:
+            print(f"Web push failed: {exc}")
+
+    return jsonify({'status': 'sent'})
 
 
 @app.route('/history.html')

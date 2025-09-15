@@ -82,6 +82,17 @@
             background-color: #ff0000;
         }
 
+        .broadcast-form {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .broadcast-form input {
+            padding: 5px;
+        }
+
     </style>
 </head>
 
@@ -91,6 +102,11 @@
     </div>
 
     <h1>Saved Images History</h1>
+    <div class="broadcast-form">
+        <input type="text" id="bc-title" placeholder="Notification title" />
+        <input type="text" id="bc-body" placeholder="Notification message" />
+        <button id="bc-send">Send</button>
+    </div>
     <div class="image-container" id="image-container"></div>
 
     <script>
@@ -134,11 +150,20 @@
                 });
             })
             .catch(err => console.error('Error fetching images:', err));
-    </script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js');
-      }
+
+        document.getElementById('bc-send').addEventListener('click', () => {
+            const title = (document.getElementById('bc-title').value || '').trim();
+            const body = (document.getElementById('bc-body').value || '').trim();
+            fetch('/broadcast', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, body })
+            });
+        });
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
     </script>
 </body>
 
