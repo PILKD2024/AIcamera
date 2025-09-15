@@ -174,9 +174,10 @@ canvas#cap{display:none}
 <body>
 <div class="haze" aria-hidden="true"></div>
 <div id="loading" class="loading"><p>Saving... Please wait</p></div>
-<div class="app">
-  <div class="topbar">
+  <div class="app">
+    <div class="topbar">
     <button id="gridBtn" class="badge"><i class="icon grid" aria-hidden="true"></i><span>Grid</span></button>
+    <button id="enablePush" class="badge">啟用通知</button>
   </div>
 
   <div class="view" aria-label="viewfinder">
@@ -228,12 +229,14 @@ const nameInput=document.getElementById('name');
 const btnConfirm=document.getElementById('confirm');
 const btnCancel=document.getElementById('cancel');
 const loadingDiv=document.getElementById('loading');
+const enablePushBtn=document.getElementById('enablePush');
 
 const zoomRange=document.getElementById('zoomRange');
 const zoomVal=document.getElementById('zoomVal');
 const zoomMinus=document.getElementById('zoomMinus');
 
 gridBtn.addEventListener('click', ()=> grid.classList.toggle('show'));
+enablePushBtn?.addEventListener('click', ()=> registerPush());
 
 async function startCamera(){
   try{
@@ -430,6 +433,8 @@ document.addEventListener('visibilitychange', ()=>{
         const errorText = await response.text();
         throw new Error(errorText || 'Subscription registration failed.');
       }
+      enablePushBtn?.setAttribute('disabled','true');
+      if(enablePushBtn) enablePushBtn.textContent='通知已啟用';
     } catch (err) {
       console.error('Failed to register push subscription:', err);
     }
@@ -437,7 +442,6 @@ document.addEventListener('visibilitychange', ()=>{
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js')
-      .then(() => registerPush())
       .catch(err => console.error('Service worker registration failed:', err));
   }
 </script>
