@@ -110,6 +110,62 @@
     <div class="image-container" id="image-container"></div>
 
     <script>
+        const VAPID_PUBLIC_KEY = 'YOUR_VAPID_PUBLIC_KEY_HERE';
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        async function registerPush() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+                console.warn('Push notifications are not supported in this browser.');
+                return;
+            }
+
+            if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY === 'YOUR_VAPID_PUBLIC_KEY_HERE') {
+                console.warn('VAPID public key is not configured.');
+                return;
+            }
+
+            try {
+                let permission = Notification.permission;
+                if (permission !== 'granted') {
+                    permission = await Notification.requestPermission();
+                }
+
+                if (permission !== 'granted') {
+                    console.warn('Notification permission was not granted.');
+                    return;
+                }
+
+                const reg = await navigator.serviceWorker.ready;
+                let sub = await reg.pushManager.getSubscription();
+
+                if (!sub) {
+                    sub = await reg.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                    });
+                }
+
+                await fetch('/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(sub)
+                });
+            } catch (err) {
+                console.error('Failed to register push subscription:', err);
+            }
+        }
+
         fetch('/get_images')
             .then(res => res.json())
             .then(data => {
@@ -152,6 +208,7 @@
             .catch(err => console.error('Error fetching images:', err));
 
         document.getElementById('bc-send').addEventListener('click', () => {
+            registerPush();
             const title = (document.getElementById('bc-title').value || '').trim();
             const body = (document.getElementById('bc-body').value || '').trim();
             fetch('/broadcast', {
@@ -162,7 +219,9 @@
         });
 
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js');
+            navigator.serviceWorker.register('/sw.js')
+                .then(() => registerPush())
+                .catch(err => console.error('Service worker registration failed:', err));
         }
     </script>
 </body>
