@@ -95,6 +95,12 @@ def index():
     return send_from_directory('.', 'index.html')  # Adjust path as needed
 
 
+@app.route('/index.html')
+def index_html():
+    """Serve index.html when the file path is requested explicitly."""
+    return send_from_directory('.', 'index.html')
+
+
 @app.route('/vapid-public-key', methods=['GET'])
 def get_vapid_public_key():
     """Expose the configured VAPID public key for the frontend."""
