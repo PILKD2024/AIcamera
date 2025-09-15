@@ -207,15 +207,24 @@
             })
             .catch(err => console.error('Error fetching images:', err));
 
-        document.getElementById('bc-send').addEventListener('click', () => {
-            registerPush();
+        document.getElementById('bc-send').addEventListener('click', async () => {
+            await registerPush();
             const title = (document.getElementById('bc-title').value || '').trim();
             const body = (document.getElementById('bc-body').value || '').trim();
-            fetch('/broadcast', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, body })
-            });
+            try {
+                const res = await fetch('/broadcast', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, body })
+                });
+                if (res.ok) {
+                    alert('Notification sent');
+                } else {
+                    alert('Broadcast failed: ' + (await res.text()));
+                }
+            } catch (err) {
+                alert('Broadcast failed: ' + (err instanceof Error ? err.message : String(err)));
+            }
         });
 
         if ('serviceWorker' in navigator) {
