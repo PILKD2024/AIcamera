@@ -352,7 +352,7 @@ document.addEventListener('visibilitychange', ()=>{
 });
 </script>
 <script>
-  const VAPID_PUBLIC_KEY = 'YOUR_VAPID_PUBLIC_KEY_HERE';
+  let vapidPublicKeyCache = null;
 
   function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -366,14 +366,36 @@ document.addEventListener('visibilitychange', ()=>{
     return outputArray;
   }
 
+  async function fetchVapidPublicKey() {
+    if (vapidPublicKeyCache) {
+      return vapidPublicKeyCache;
+    }
+    try {
+      const response = await fetch('/vapid-public-key', { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch public key (${response.status})`);
+      }
+      const data = await response.json();
+      if (!data || !data.publicKey) {
+        throw new Error('Response did not include a publicKey value.');
+      }
+      vapidPublicKeyCache = data.publicKey;
+      return vapidPublicKeyCache;
+    } catch (err) {
+      console.error('Unable to load VAPID public key:', err);
+      return null;
+    }
+  }
+
   async function registerPush() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
       console.warn('Push notifications are not supported in this browser.');
       return;
     }
 
-    if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY === 'YOUR_VAPID_PUBLIC_KEY_HERE') {
-      console.warn('VAPID public key is not configured.');
+    const vapidPublicKey = await fetchVapidPublicKey();
+    if (!vapidPublicKey) {
+      console.warn('VAPID public key could not be loaded.');
       return;
     }
 
@@ -394,15 +416,20 @@ document.addEventListener('visibilitychange', ()=>{
       if (!sub) {
         sub = await reg.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
         });
       }
 
-      await fetch('/subscribe', {
+      const response = await fetch('/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sub)
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Subscription registration failed.');
+      }
     } catch (err) {
       console.error('Failed to register push subscription:', err);
     }
