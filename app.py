@@ -2,7 +2,11 @@ import base64
 import binascii
 import json
 import os
+from datetime import datetime, timezone
+from urllib.parse import urlparse
 
+import httpx
+import jwt
 import psycopg2
 from flask import Flask, request, jsonify, send_from_directory
 from pywebpush import WebPushException, webpush
@@ -38,18 +42,136 @@ def _decode_base64url(data: str) -> bytes:
     return base64.urlsafe_b64decode(data + padding)
 
 
+def _is_apns_endpoint(endpoint: str | None) -> bool:
+    if not endpoint:
+        return False
+    try:
+        parsed = urlparse(endpoint)
+    except Exception:
+        return False
+    hostname = (parsed.hostname or "").lower()
+    return hostname == "api.push.apple.com"
+
+
+def _load_apns_private_key() -> bytes | None:
+    global _APNS_PRIVATE_KEY_CACHE
+    if not APNS_AUTH_KEY_PATH:
+        return None
+    if _APNS_PRIVATE_KEY_CACHE is None:
+        try:
+            with open(APNS_AUTH_KEY_PATH, "rb") as key_file:
+                _APNS_PRIVATE_KEY_CACHE = key_file.read()
+        except OSError as exc:
+            print(f"Failed to read APNs private key: {exc}")
+            return None
+    return _APNS_PRIVATE_KEY_CACHE
+
+
+def _generate_apns_jwt() -> str | None:
+    if not APNS_KEY_ID or not APNS_TEAM_ID:
+        return None
+    private_key = _load_apns_private_key()
+    if not private_key:
+        return None
+    now = datetime.now(timezone.utc)
+    token = jwt.encode(
+        {"iss": APNS_TEAM_ID, "iat": int(now.timestamp())},
+        private_key,
+        algorithm="ES256",
+        headers={"kid": APNS_KEY_ID},
+    )
+    return token
+
+
+def _send_apns_push(subscription: dict, title: str, body: str) -> tuple[bool, bool]:
+    endpoint = subscription.get("endpoint")
+    if not endpoint or not _is_apns_endpoint(endpoint):
+        return False, False
+    if not APNS_WEB_PUSH_ID:
+        print("APNs configuration missing APNS_WEB_PUSH_ID; skipping push.")
+        return False, False
+
+    alert_payload: dict[str, str] = {}
+    if title:
+        alert_payload["title"] = title
+    if body:
+        alert_payload["body"] = body
+
+    aps_payload: dict[str, object] = {"aps": {}}
+    if alert_payload:
+        aps_payload["aps"]["alert"] = alert_payload
+    else:
+        aps_payload["aps"]["alert"] = ""
+
+    base_headers = {
+        "apns-topic": APNS_WEB_PUSH_ID,
+        "apns-push-type": "webpush",
+        "Content-Type": "application/json",
+    }
+
+    response = None
+    reason = None
+    for attempt in range(2):
+        jwt_token = _generate_apns_jwt()
+        if not jwt_token:
+            print("APNs JWT generation failed due to missing credentials; skipping push.")
+            return False, False
+        headers = {**base_headers, "Authorization": f"bearer {jwt_token}"}
+        try:
+            with httpx.Client(http2=True, timeout=10.0) as client:
+                response = client.post(endpoint, headers=headers, json=aps_payload)
+        except httpx.HTTPError as exc:
+            print(f"APNs push failed: {exc}")
+            return False, False
+
+        try:
+            if response.text:
+                reason = response.json().get("reason")
+            else:
+                reason = None
+        except ValueError:
+            reason = None
+
+        if response.status_code == 403 and reason == "ExpiredProviderToken" and attempt == 0:
+            continue
+        break
+
+    if response is None:
+        return False, False
+
+    if response.status_code in {200, 201, 202, 204}:
+        return True, False
+
+    should_remove = False
+    if response.status_code in {400, 404, 410} or reason in {"BadDeviceToken", "DeviceTokenNotForTopic", "Unregistered"}:
+        should_remove = True
+
+    if should_remove:
+        print(f"Removing invalid APNs subscription: {reason or response.status_code}")
+    else:
+        print(f"APNs push failed: {response.status_code} {reason or response.text}")
+
+    return False, should_remove
+
+
 VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", DEFAULT_VAPID_PRIVATE_KEY)
 _derived_public = _derive_public_key(VAPID_PRIVATE_KEY)
 VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", _derived_public or DEFAULT_VAPID_PUBLIC_KEY)
 VAPID_CLAIMS = {"sub": os.getenv("VAPID_EMAIL", "mailto:example@example.com")}
 
+APNS_KEY_ID = os.getenv("APNS_KEY_ID")
+APNS_TEAM_ID = os.getenv("APNS_TEAM_ID")
+APNS_WEB_PUSH_ID = os.getenv("APNS_WEB_PUSH_ID")
+APNS_AUTH_KEY_PATH = os.getenv("APNS_AUTH_KEY_PATH")
+_APNS_PRIVATE_KEY_CACHE: bytes | None = None
+
 # 1. Configure your PostgreSQL database connection
 #    Replace with your actual database credentials
-DB_HOST = 'dpg-cttejurqf0us73erd8s0-a'
-DB_NAME = 'database_aicamera'
-DB_USER = 'database_aicamera_user'
-DB_PASSWORD = 'K3qqkaQzJoSLEhOsMIOhlVYi9ktIaANz'
-DB_PORT = 5432
+DB_HOST = os.getenv('DB_HOST', 'dpg-cttejurqf0us73erd8s0-a')
+DB_NAME = os.getenv('DB_NAME', 'database_aicamera')
+DB_USER = os.getenv('DB_USER', 'database_aicamera_user')
+DB_PASSWORD = os.getenv('DB_PASSWORD', 'K3qqkaQzJoSLEhOsMIOhlVYi9ktIaANz')
+DB_PORT = int(os.getenv('DB_PORT', '5432'))
 
 # 2. Connect to the PostgreSQL database
 def get_db_connection():
@@ -240,6 +362,12 @@ def broadcast():
     payload = json.dumps({'title': title, 'body': body})
 
     for sub in list(subscriptions):
+        endpoint = sub.get('endpoint')
+        if _is_apns_endpoint(endpoint):
+            _, should_remove = _send_apns_push(sub, title, body)
+            if should_remove:
+                subscriptions.remove(sub)
+            continue
         try:
             webpush(
                 subscription_info=sub,
@@ -249,6 +377,10 @@ def broadcast():
             )
         except WebPushException as exc:
             print(f"Web push failed: {exc}")
+            response = getattr(exc, 'response', None)
+            status_code = getattr(response, 'status_code', None)
+            if status_code in (404, 410):
+                subscriptions.remove(sub)
 
     return jsonify({'status': 'sent'})
 
