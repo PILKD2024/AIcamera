@@ -38,6 +38,10 @@ def _decode_base64url(data: str) -> bytes:
     return base64.urlsafe_b64decode(data + padding)
 
 
+def _is_apns_endpoint(hostname: str) -> bool:
+    return hostname in {"api.push.apple.com", "api.sandbox.push.apple.com"}
+
+
 VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", DEFAULT_VAPID_PRIVATE_KEY)
 _derived_public = _derive_public_key(VAPID_PRIVATE_KEY)
 VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", _derived_public or DEFAULT_VAPID_PUBLIC_KEY)
